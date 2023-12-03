@@ -1,0 +1,13 @@
+import numpy as np
+
+threshold = 0.8  # Example threshold, needs tuning
+duplicates = []
+sim_matrix = np.load('/home/fhossain/replication_package/0_data/0_bug report collection/corpus and queries/continuum/cosine_similarity_matrix.npy')
+for i in range(len(sim_matrix)):
+    for j in range(i+1, len(sim_matrix)):
+        if sim_matrix[i][j] > threshold:
+            duplicates.append((i, j))
+
+# Printing the pairs of indices that are considered duplicates
+for dup_pair in duplicates:
+    print(f"Bug Report {dup_pair[0]} is a duplicate of Bug Report {dup_pair[1]}")
