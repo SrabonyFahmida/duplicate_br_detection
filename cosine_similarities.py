@@ -1,16 +1,19 @@
+import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 
-# Calculate cosine similarities
-# This will create a matrix where each element [i, j] represents the cosine similarity 
-# between the embeddings of bug report i and bug report j
-cosine_similarities = cosine_similarity(embeddings)
+# Load the embeddings from the .npy file
+# Replace '/path/to/your/bug_report_embeddings.npy' with the actual file path
+embeddings_file = '/home/fhossain/replication_package/0_data/0_bug report collection/corpus and queries/continuum/bug_report_embeddings.npy'
+embeddings = np.load(embeddings_file)
 
+# Calculate the cosine similarity matrix
+cosine_sim_matrix = cosine_similarity(embeddings)
 
-# Example: Get the most similar bug reports to the first report
-first_report_similarities = cosine_similarities[0]
+# Now, cosine_sim_matrix[i][j] represents the cosine similarity between 
+# the embeddings of the i-th and j-th bug reports
 
-# Sort the reports based on similarity (excluding the first report itself)
-most_similar_indices = first_report_similarities.argsort()[::-1][1:]
+# Example: print cosine similarity between the first and second bug reports
+print("Cosine Similarity between the first and second bug reports:", cosine_sim_matrix[0][1])
 
-# Print the indices of the most similar reports
-print("Most similar reports to the first report:", most_similar_indices)
+# If you want to save the cosine similarity matrix to a file:
+np.save('/home/fhossain/replication_package/0_data/0_bug report collection/corpus and queries/continuum/cosine_similarity_matrix.npy', cosine_sim_matrix)
