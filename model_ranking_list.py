@@ -34,16 +34,6 @@ for report in bug_reports:
 # Generate embeddings for each combined bug report text
 embeddings = model.encode(bug_report_texts)
 
-# Save embeddings to a file
-#np.save('/home/fhossain/replication_package/0_data/0_bug report collection/corpus and queries/continuum/bug_report_embeddings.npy', embeddings)
-
-#import numpy as np
-
-# Load the embeddings from the .npy file
-# Replace '/path/to/your/bug_report_embeddings.npy' with the actual file path
-
-#embeddings_file = '/home/fhossain/replication_package/0_data/0_bug report collection/corpus and queries/continuum/bug_report_embeddings.npy'
-#embeddings = np.load(embeddings_file)
 
 # Calculate the cosine similarity matrix
 sim_matrix = cosine_similarity(embeddings)
@@ -52,24 +42,13 @@ sim_matrix = cosine_similarity(embeddings)
 # the embeddings of the i-th and j-th bug reports
 
 # Example: print cosine similarity between the first and second bug reports
-print("Cosine Similarity between the first and second bug reports:", cosine_sim_matrix[0][1])
-
-# If you want to save the cosine similarity matrix to a file:
-
-#np.save('/home/fhossain/replication_package/0_data/0_bug report collection/corpus and queries/continuum/cosine_similarity_matrix.npy', cosine_sim_matrix)
-
-#import numpy as np
-
-'''import json
-
-#this is list the ID
-bug_reports_file = '/home/aalmuhana/Desktop/replication_package/outputs/primary_80_reports.json'
+#print("Cosine Similarity between the first and second bug reports:", cosine_sim_matrix[0][1])
 
 
 bug_report_ids = []
 
 # Reading and parsing bug reports from the file
-with open(bug_reports_file, 'r') as file:
+with open(bug_reports, 'r') as file:
     for line in file:
         try:
             # Attempt to parse each line as a separate JSON object
@@ -79,31 +58,6 @@ with open(bug_reports_file, 'r') as file:
         except json.JSONDecodeError as e:
             print(f"Error reading JSON from line: {e}")
 
-print(bug_report_ids)
-'''
-import json
-import numpy as np
-
-# File path for your bug reports file
-bug_reports_file = '/home/fhossain/replication_package/0_data/0_bug report collection/corpus and queries/accumulo/test.json'
-
-
-bug_report_ids = []
-
-# Reading and parsing bug reports from the file
-with open(bug_reports_file, 'r') as file:
-    for line in file:
-        try:
-            # Attempt to parse each line as a separate JSON object
-            report = json.loads(line)
-            # Extract the 'key' field and add it to the list
-            bug_report_ids.append(report["key"])
-        except json.JSONDecodeError as e:
-            print(f"Error reading JSON from line: {e}")
-
-# Assuming 'sim_matrix' is your cosine similarity matrix
-# Replace the following line with your actual cosine similarity matrix
-sim_matrix = np.array([...])  # Replace with your actual matrix
 
 # Create a dictionary for each bug report
 bug_report_rankings = {}
