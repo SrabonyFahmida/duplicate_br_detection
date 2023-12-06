@@ -44,11 +44,14 @@ sim_matrix = cosine_similarity(embeddings)
 # Example: print cosine similarity between the first and second bug reports
 #print("Cosine Similarity between the first and second bug reports:", cosine_sim_matrix[0][1])
 
+# File path for your bug reports file
+bug_reports_file = '/home/fhossain/replication_package/0_data/0_bug report collection/corpus and queries/accumulo/test.json'
+
 
 bug_report_ids = []
 
 # Reading and parsing bug reports from the file
-with open(bug_reports, 'r') as file:
+with open(bug_reports_file, 'r') as file:
     for line in file:
         try:
             # Attempt to parse each line as a separate JSON object
