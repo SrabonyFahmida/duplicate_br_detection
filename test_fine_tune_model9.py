@@ -1,62 +1,67 @@
+test_fine_tune_model9.py
 import json
-import torch
-from sentence_transformers import SentenceTransformer, InputExample, losses
-from torch.utils.data import DataLoader
-import random
+import numpy as np
+from sentence_transformers import SentenceTransformer
+from sklearn.metrics.pairwise import cosine_similarity
 
-# Function to read JSON objects from a file
+# read JSON objects from a file
 def read_json_objects(file_path):
-    reports = []
     with open(file_path, 'r') as file:
-        for line in file:
-            try:
-                report = json.loads(line)
-                reports.append(report)
-            except json.JSONDecodeError as e:
-                print(f"Error reading JSON from line: {e}")
-    return reports
+        return [json.loads(line) for line in file]
 
-# Function to create training examples from the bug reports
-def create_training_examples(reports, num_negatives=1):
-    examples = []
-    for report in reports:
-        
-        anchor_text = report['key']
+def calculate_precision_recall_f1(predicted, actual):
+    true_positives = len(set(predicted) & set(actual))
+    false_positives = len(set(predicted) - set(actual))
+    false_negatives = len(set(actual) - set(predicted))
+    precision = true_positives / (true_positives + false_positives) if true_positives + false_positives > 0 else 0
+    recall = true_positives / (true_positives + false_negatives) if true_positives + false_negatives > 0 else 0
+    f1 = 2 * (precision * recall) / (precision + recall) if precision + recall > 0 else 0
+    return precision, recall, f1
 
-        # Creating positive 
-        for duplicate_key in report.get('duplicates', []):
-            duplicate_report = next((r for r in reports if r['key'] == duplicate_key), None)
-            if duplicate_report:
-                examples.append(InputExample(texts=[anchor_text, duplicate_report['text']], label=1))
+# Load the fine-tuned model
+model = SentenceTransformer('/home/aalmuhana/Desktop/replication_package/outputs/fine_tuned_model')
 
-        # Creating negative 
-        for _ in range(num_negatives):
-            non_duplicate_report = random.choice(reports)
-            while non_duplicate_report['key'] in report.get('duplicates', []):
-                non_duplicate_report = random.choice(reports)
-            examples.append(InputExample(texts=[anchor_text, non_duplicate_report['key']], label=0))
+# Load test data
+test_bug_reports = read_json_objects('/home/aalmuhana/Desktop/replication_package/outputs/preprocessed_80_percent_data.json')
 
-    return examples
+# Generate embeddings for test data
+test_texts = [report['text'] + ' ' for report in test_bug_reports]
+test_embeddings = model.encode(test_texts)
+print("Calculating similarity matrix for all pairs in test data...")
+# Calculate similarity matrix for all pairs in test data
+similarity_matrix = cosine_similarity(test_embeddings)
 
-# Load the bug reports from the file
-file_path = '/home/fhossain/replication_package/0_data/0_bug report collection/corpus and queries/accumulo/train.json'
+# Open a file to write similarity scores
+print(f"Writing similarity scores to file...")
+with open('/home/aalmuhana/Desktop/replication_package/outputs/similarity_between_bugs.txt', 'w') as sim_file:
+    for i in range(len(test_bug_reports)):
+        for j in range(i + 1, len(test_bug_reports)):
+            report_id_i = test_bug_reports[i]['key']
+            report_id_j = test_bug_reports[j]['key']
+            sim_file.write(f"Similarity between report {report_id_i} and report {report_id_j}: {similarity_matrix[i][j]}\n")
 
+print("Loading ground truth data for evaluation...")
+# Load the ground truth data for evaluation
+ground_truth_list = read_json_objects('/home/aalmuhana/Desktop/replication_package/0_data/0_bug report collection/corpus and queries/accumulo/dup-bug-report-queries.json')
+ground_truth_data = {item['key']: item['duplicateBugs'] for item in ground_truth_list}
 
-bug_reports = read_json_objects(file_path)
+# Open a file to write evaluation metrics
+with open('/home/aalmuhana/Desktop/replication_package/outputs/evaluation_fine_tuned.txt', 'w') as eval_file:
+    for report in test_bug_reports:
+        report_id = report['key']
+        report_embedding = model.encode(report['text'] + ' ')
+        predicted_duplicates = []
 
-# Create training examples
-training_examples = create_training_examples(bug_reports, num_negatives=3)
+     # Calculate cosine similarities and predict duplicates
+        for other_report in test_bug_reports:
+            other_report_id = other_report['key']
+            if report_id != other_report_id:
+                other_report_embedding = model.encode(other_report['text'] + ' ')
+                similarity = cosine_similarity([report_embedding], [other_report_embedding])[0][0]
+                if similarity >= 0.5:  # similarity threshold of 0.5 for duplicates
+                    predicted_duplicates.append(other_report_id)
 
-# Initialize the SentenceBERT model
-model = SentenceTransformer('all-MiniLM-L6-v2')
-
-# Create a DataLoader for our training examples
-train_dataloader = DataLoader(training_examples, shuffle=True, batch_size=16)
-
-# Define a loss function. Adjust the loss function as needed.
-train_loss = losses.MultipleNegativesRankingLoss(model)
-
-# Train the model
-model.fit(train_objectives=[(train_dataloader, train_loss)], epochs=4, warmup_steps=100)
-
-model.save('/home/fhossain/replication_package/0_data/0_bug report collection/corpus and queries/accumulo/fine_tuned_model')  
+        actual_duplicates = ground_truth_data.get(report_id, [])
+        precision, recall, f1 = calculate_precision_recall_f1(predicted_duplicates, actual_duplicates)
+        eval_file.write(f"Report ID: {report_id}, Precision: {precision}, Recall: {recall}, F1: {f1}\n")
+print("Script execution completed.")
