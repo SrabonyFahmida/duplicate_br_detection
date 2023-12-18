@@ -5,7 +5,9 @@
 
 3.preprocess_data.py
 
-4.updated_model.py : Evaluating Zero Shot Model on Test dataset.
+4.Final_Ranking_updated.py : Evaluating Zero Shot Model on Test dataset.
 
 5.fine_tune9.py : Fine Tuning the model on Train dataset.
+
+
 
