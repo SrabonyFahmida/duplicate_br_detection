@@ -3,4 +3,4 @@
 
 2.GT_PlaceHolder.py
 
-3.
+3.updated_model.py : Evaluating Zero Shot Model on Test dataset.
