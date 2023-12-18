@@ -1,62 +1,79 @@
+import re
+import nltk
+from nltk.corpus import stopwords
+from nltk.stem import WordNetLemmatizer
 import json
-import torch
-from sentence_transformers import SentenceTransformer, InputExample, losses
-from torch.utils.data import DataLoader
-import random
 
-# Function to read JSON objects from a file
+# Download required NLTK resources
+nltk.download('stopwords')
+nltk.download('wordnet')
+
+# Initialize the lemmatizer and stopwords list
+lemmatizer = WordNetLemmatizer()
+stop_words = set(stopwords.words('english'))
+
+
+def preprocess_text(text):
+    # Convert to lowercase
+    text = text.lower()
+
+    # Remove special characters and line breaks
+    text = re.sub(r'\W', ' ', text)   
+    text = re.sub(r'\s+', ' ', text)  
+
+    # Tokenize and remove stopwords
+    words = text.split()
+    words = [word for word in words if word not in stop_words]
+
+    # Lemmatize each word
+    lemmatized_words = [lemmatizer.lemmatize(word) for word in words]
+
+    # Re-join words into a single string
+    cleaned_text = ' '.join(lemmatized_words)
+
+    return cleaned_text
 def read_json_objects(file_path):
-    reports = []
+    bug_reports = []
     with open(file_path, 'r') as file:
         for line in file:
             try:
                 report = json.loads(line)
-                reports.append(report)
+                bug_reports.append(report)
             except json.JSONDecodeError as e:
                 print(f"Error reading JSON from line: {e}")
-    return reports
+    return bug_reports
+def preprocess_and_save(file_path, output_file_path):
+    bug_reports = read_json_objects(file_path)
+    preprocessed_reports = []
 
-# Function to create training examples from the bug reports
-def create_training_examples(reports, num_negatives=1):
-    examples = []
-    for report in reports:
-        
-        anchor_text = report['key']
+    for report in bug_reports:
+        title = report.get('title', '')
+        description = report.get('description', '')
+        combined_text = title + ' ' + description
+        preprocessed_text = preprocess_text(combined_text)
+        preprocessed_reports.append({
+            "key": report["key"],
+            "text": preprocessed_text
+        })
 
-        # Creating positive 
-        for duplicate_key in report.get('duplicates', []):
-            duplicate_report = next((r for r in reports if r['key'] == duplicate_key), None)
-            if duplicate_report:
-                examples.append(InputExample(texts=[anchor_text, duplicate_report['text']], label=1))
-
-        # Creating negative 
-        for _ in range(num_negatives):
-            non_duplicate_report = random.choice(reports)
-            while non_duplicate_report['key'] in report.get('duplicates', []):
-                non_duplicate_report = random.choice(reports)
-            examples.append(InputExample(texts=[anchor_text, non_duplicate_report['key']], label=0))
-
-    return examples
-
-# Load the bug reports from the file
-file_path = '/home/fhossain/replication_package/0_data/0_bug report collection/corpus and queries/accumulo/train.json'
+    # Saving the preprocessed data
+    with open(output_file_path, 'w') as outfile:
+      for report in preprocessed_reports:
+          json.dump(report, outfile)
+          outfile.write('\n')  
 
 
-bug_reports = read_json_objects(file_path)
 
-# Create training examples
-training_examples = create_training_examples(bug_reports, num_negatives=3)
+# Paths to your original data files
+file_path_80 = '/home/aalmuhana/Desktop/replication_package/outputs/primary_80_reports.json'
+file_path_20 = '/home/aalmuhana/Desktop/replication_package/outputs/secondary_20_reports.json'
 
-# Initialize the SentenceBERT model
-model = SentenceTransformer('all-MiniLM-L6-v2')
+# Paths to your output files for preprocessed data
+output_file_path_80 = '/home/aalmuhana/Desktop/replication_package/outputs/preprocessed_80_percent_data.json'
+output_file_path_20 = '/home/aalmuhana/Desktop/replication_package/outputs/preprocessed_20_percent_data.json'
 
-# Create a DataLoader for our training examples
-train_dataloader = DataLoader(training_examples, shuffle=True, batch_size=16)
 
-# Define a loss function. Adjust the loss function as needed.
-train_loss = losses.MultipleNegativesRankingLoss(model)
+preprocess_and_save(file_path_80, output_file_path_80)
 
-# Train the model
-model.fit(train_objectives=[(train_dataloader, train_loss)], epochs=4, warmup_steps=100)
 
-model.save('/home/fhossain/replication_package/0_data/0_bug report collection/corpus and queries/accumulo/fine_tuned_model')  
+preprocess_and_save(file_path_20, output_file_path_20)
